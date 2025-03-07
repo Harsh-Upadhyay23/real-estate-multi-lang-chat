@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            Welcome, <%= username %> (Language: <%= language %>)
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+
+        <div class="online-users">
+            <strong>Online Users:</strong>
+            <ul id="online-users-list"></ul>
+        </div>
+
+        <div id="typing-status" class="typing-status"></div>
+        <div id="messages" class="chat-box"></div>
+
+        <div class="chat-input">
+            <input type="text" id="message" placeholder="Type a message..." oninput="userTyping()">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const username = "<%= username %>";
+        const userLanguage = "<%= language %>";
+        let typingTimer;
+
+        socket.emit("user connected", { 
+            username: username, 
+            language: userLanguage 
+        });
+
+        function sendMessage() {
+            const messageInput = document.getElementById("message");
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            socket.emit("chat message", { 
+                sender: username, 
+                message: message
+            });
+            
+            messageInput.value = "";
+        }
+
+        socket.on("chat message", (data) => {
+            displayMessage(data.sender, data.message, data.sender === username);
+        });
+
+        function displayMessage(sender, message, isSender) {
+            const messagesDiv = document.getElementById("messages");
+            const messageDiv = document.createElement("div");
+            messageDiv.className = `message ${isSender ? 'sent' : 'received'}`;
+            messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        socket.on("update users", (users) => {
+            const userList = document.getElementById("online-users-list");
+            userList.innerHTML = users.map(user => `<li>${user}</li>`).join('');
+        });
+
+        function userTyping() {
+            socket.emit("typing", username);
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                socket.emit("stop typing", username);
+            }, 2000);
+        }
+
+        socket.on("typing", (user) => {
+            if (user !== username) {
+                document.getElementById("typing-status").textContent = `${user} is typing...`;
+            }
+        });
+
+        socket.on("stop typing", (user) => {
+            if (user !== username) {
+                document.getElementById("typing-status").textContent = "";
+            }
+        });
+    </script>
+</body>
+</html>
