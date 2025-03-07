@@ -22,7 +22,7 @@ const db = mysql.createPool({
     connectionLimit: 10,
     host: "localhost",
     user: "root",
-    password: "Harshu267",
+    password: "",
     database: "chatapp1"
 });
 
